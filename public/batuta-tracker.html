@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conductor Baton Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500;600&family=JetBrains+Mono:wght@300&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0a0c;
+            --gold: #d4af37;
+            --gold-dim: #8b7355;
+            --cream: #f5f0e8;
+            --burgundy: #722f37;
+        }
+
+        body {
+            font-family: 'Cormorant Garamond', serif;
+            background: var(--bg-dark);
+            color: var(--cream);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        header::before {
+            content: '♩';
+            position: absolute;
+            left: 50%;
+            top: -1rem;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            color: var(--gold-dim);
+            opacity: 0.5;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--cream);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            letter-spacing: 0.2em;
+            color: var(--gold-dim);
+            font-weight: 300;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .video-section {
+            position: relative;
+            background: linear-gradient(145deg, #111114 0%, #0a0a0c 100%);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+        }
+
+        #videoElement, #uploadedVideo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        #canvasElement {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 20px,
+                rgba(212, 175, 55, 0.02) 20px,
+                rgba(212, 175, 55, 0.02) 40px
+            );
+        }
+
+        .placeholder-icon {
+            font-size: 4rem;
+            color: var(--gold-dim);
+            opacity: 0.4;
+            margin-bottom: 1rem;
+        }
+
+        .placeholder-text {
+            font-size: 1.1rem;
+            color: var(--gold-dim);
+            letter-spacing: 0.15em;
+        }
+
+        .controls-bar {
+            display: flex;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.4);
+            border-top: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            border: 1px solid var(--gold-dim);
+            background: transparent;
+            color: var(--cream);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn.active {
+            background: var(--gold);
+            color: var(--bg-dark);
+            border-color: var(--gold);
+        }
+
+        .btn-icon {
+            margin-right: 0.5rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .side-panel {
+            background: linear-gradient(180deg, rgba(17, 17, 20, 0.9) 0%, rgba(10, 10, 12, 0.95) 100%);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 4px;
+            padding: 1.5rem;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .setting-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .setting-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--cream);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .setting-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--gold-dim);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(212, 175, 55, 0.2);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--gold);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .color-picker-wrapper {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+
+        .color-option.selected {
+            border-color: var(--cream);
+            box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            margin-top: 1.5rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--gold-dim);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.active {
+            background: #4ade80;
+        }
+
+        .status-dot.loading {
+            background: var(--gold);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .status-text {
+            font-size: 0.85rem;
+            color: var(--cream);
+            letter-spacing: 0.05em;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper input {
+            display: none;
+        }
+
+        .custom-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 1px solid var(--gold-dim);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-wrapper input:checked + .custom-checkbox {
+            background: var(--gold);
+            border-color: var(--gold);
+        }
+
+        .custom-checkbox::after {
+            content: '✓';
+            color: var(--bg-dark);
+            font-size: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .checkbox-wrapper input:checked + .custom-checkbox::after {
+            opacity: 1;
+        }
+
+        .info-section {
+            margin-top: 2rem;
+            padding: 1.25rem;
+            background: rgba(114, 47, 55, 0.15);
+            border: 1px solid rgba(114, 47, 55, 0.3);
+            border-radius: 4px;
+        }
+
+        .info-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--burgundy);
+            margin-bottom: 0.75rem;
+        }
+
+        .info-text {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: rgba(245, 240, 232, 0.7);
+        }
+
+        .video-controls {
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        .video-controls.visible {
+            display: flex;
+        }
+
+        .play-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--gold);
+            background: transparent;
+            color: var(--gold);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .play-btn:hover {
+            background: var(--gold);
+            color: var(--bg-dark);
+        }
+
+        .timeline {
+            flex: 1;
+            height: 4px;
+            background: rgba(212, 175, 55, 0.2);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .timeline-progress {
+            height: 100%;
+            background: var(--gold);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .time-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--gold-dim);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .side-panel {
+                order: -1;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+                letter-spacing: 0.2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Baton Tracker</h1>
+            <p class="subtitle">Visualize the Art of Conducting</p>
+        </header>
+
+        <main class="main-content">
+            <section class="video-section">
+                <div class="video-container">
+                    <video id="videoElement" playsinline></video>
+                    <video id="uploadedVideo" playsinline></video>
+                    <canvas id="canvasElement"></canvas>
+                    <div class="placeholder" id="placeholder">
+                        <div class="placeholder-icon">🎼</div>
+                        <p class="placeholder-text">Start camera or upload a video</p>
+                    </div>
+                </div>
+                
+                <div class="video-controls" id="videoControls">
+                    <button class="play-btn" id="playPauseBtn">▶</button>
+                    <div class="timeline" id="timeline">
+                        <div class="timeline-progress" id="timelineProgress"></div>
+                    </div>
+                    <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
+                </div>
+
+                <div class="controls-bar">
+                    <button class="btn" id="cameraBtn">
+                        <span class="btn-icon">📷</span> Start Camera
+                    </button>
+                    <button class="btn" id="uploadBtn">
+                        <span class="btn-icon">📁</span> Upload Video
+                    </button>
+                    <button class="btn" id="clearBtn">
+                        <span class="btn-icon">✖</span> Clear Trail
+                    </button>
+                    <input type="file" id="fileInput" accept="video/*">
+                </div>
+            </section>
+
+            <aside class="side-panel">
+                <h2 class="panel-title">Trail Settings</h2>
+
+                <div class="setting-group">
+                    <label class="setting-label">
+                        Trail Length
+                        <span class="setting-value" id="trailLengthValue">60</span>
+                    </label>
+                    <input type="range" id="trailLength" min="10" max="200" value="60">
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">
+                        Trail Width
+                        <span class="setting-value" id="trailWidthValue">4</span>
+                    </label>
+                    <input type="range" id="trailWidth" min="1" max="12" value="4">
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">
+                        Baton Extension
+                        <span class="setting-value" id="batonExtensionValue">0.15</span>
+                    </label>
+                    <input type="range" id="batonExtension" min="0" max="150" value="15">
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">
+                        Smoothing
+                        <span class="setting-value" id="smoothingValue">5</span>
+                    </label>
+                    <input type="range" id="smoothing" min="1" max="15" value="5">
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Trail Color</label>
+                    <div class="color-picker-wrapper">
+                        <div class="color-option selected" data-color="#d4af37" style="background: linear-gradient(135deg, #d4af37, #f5d469);"></div>
+                        <div class="color-option" data-color="#ff6b6b" style="background: linear-gradient(135deg, #ff6b6b, #ffa07a);"></div>
+                        <div class="color-option" data-color="#4ecdc4" style="background: linear-gradient(135deg, #4ecdc4, #7fefef);"></div>
+                        <div class="color-option" data-color="#a855f7" style="background: linear-gradient(135deg, #a855f7, #d8b4fe);"></div>
+                        <div class="color-option" data-color="#ffffff" style="background: linear-gradient(135deg, #ffffff, #e0e0e0);"></div>
+                        <div class="color-option" data-color="#22c55e" style="background: linear-gradient(135deg, #22c55e, #86efac);"></div>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" id="showHand" checked>
+                        <span class="custom-checkbox"></span>
+                        <span>Show Hand Skeleton</span>
+                    </label>
+                </div>
+
+                <div class="setting-group">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" id="glowEffect" checked>
+                        <span class="custom-checkbox"></span>
+                        <span>Glow Effect</span>
+                    </label>
+                </div>
+
+                <div class="status-indicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span class="status-text" id="statusText">Ready</span>
+                </div>
+
+                <div class="info-section">
+                    <h3 class="info-title">How it works</h3>
+                    <p class="info-text">
+                        The tracker follows your right hand and extends a virtual baton from your index finger. 
+                        Adjust the "Baton Extension" to match your actual baton length for accurate tracking.
+                    </p>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script>
+        // State
+        let trailPoints = [];
+        let isTracking = false;
+        let hands = null;
+        let camera = null;
+        let animationId = null;
+        let currentSource = null; // 'camera' or 'video'
+
+        // Settings
+        const settings = {
+            trailLength: 60,
+            trailWidth: 4,
+            batonExtension: 0.15,
+            trailColor: '#d4af37',
+            showHand: true,
+            glowEffect: true,
+            smoothing: 5
+        };
+
+        // Smoothing buffer for incoming points
+        let smoothingBuffer = [];
+
+        // DOM Elements
+        const videoElement = document.getElementById('videoElement');
+        const uploadedVideo = document.getElementById('uploadedVideo');
+        const canvasElement = document.getElementById('canvasElement');
+        const placeholder = document.getElementById('placeholder');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const fileInput = document.getElementById('fileInput');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const videoControls = document.getElementById('videoControls');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const timeline = document.getElementById('timeline');
+        const timelineProgress = document.getElementById('timelineProgress');
+        const timeDisplay = document.getElementById('timeDisplay');
+
+        const ctx = canvasElement.getContext('2d');
+
+        // Initialize MediaPipe Hands
+        function initHands() {
+            hands = new Hands({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }
+            });
+
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.7,
+                minTrackingConfidence: 0.5
+            });
+
+            hands.onResults(onResults);
+        }
+
+        // Process hand tracking results
+        function onResults(results) {
+            // Set canvas size to match video
+            const activeVideo = currentSource === 'camera' ? videoElement : uploadedVideo;
+            canvasElement.width = activeVideo.videoWidth || 640;
+            canvasElement.height = activeVideo.videoHeight || 480;
+
+            ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                
+                // Calculate baton tip position
+                // Using index finger tip and extending beyond it
+                const indexTip = landmarks[8];
+                const indexDip = landmarks[7];
+                const indexPip = landmarks[6];
+                
+                // Direction vector from PIP to TIP
+                const dx = indexTip.x - indexPip.x;
+                const dy = indexTip.y - indexPip.y;
+                
+                // Extend beyond fingertip
+                const batonTipX = indexTip.x + dx * settings.batonExtension * 3;
+                const batonTipY = indexTip.y + dy * settings.batonExtension * 3;
+
+                // Add to smoothing buffer
+                smoothingBuffer.push({
+                    x: batonTipX * canvasElement.width,
+                    y: batonTipY * canvasElement.height
+                });
+
+                // Keep buffer at smoothing size
+                while (smoothingBuffer.length > settings.smoothing) {
+                    smoothingBuffer.shift();
+                }
+
+                // Calculate smoothed point (moving average)
+                const smoothedPoint = {
+                    x: smoothingBuffer.reduce((sum, p) => sum + p.x, 0) / smoothingBuffer.length,
+                    y: smoothingBuffer.reduce((sum, p) => sum + p.y, 0) / smoothingBuffer.length,
+                    timestamp: Date.now()
+                };
+
+                // Add smoothed point to trail
+                trailPoints.push(smoothedPoint);
+
+                // Limit trail length
+                while (trailPoints.length > settings.trailLength) {
+                    trailPoints.shift();
+                }
+
+                // Draw hand skeleton
+                if (settings.showHand) {
+                    drawHandSkeleton(landmarks);
+                }
+
+                // Draw virtual baton
+                drawBaton(indexTip, batonTipX, batonTipY);
+
+                // Update status
+                statusDot.classList.add('active');
+                statusText.textContent = 'Tracking';
+            } else {
+                statusDot.classList.remove('active');
+                statusText.textContent = 'No hand detected';
+            }
+
+            // Draw trail
+            drawTrail();
+        }
+
+        function drawHandSkeleton(landmarks) {
+            const connections = [
+                [0, 1], [1, 2], [2, 3], [3, 4],      // Thumb
+                [0, 5], [5, 6], [6, 7], [7, 8],      // Index
+                [0, 9], [9, 10], [10, 11], [11, 12], // Middle
+                [0, 13], [13, 14], [14, 15], [15, 16], // Ring
+                [0, 17], [17, 18], [18, 19], [19, 20], // Pinky
+                [5, 9], [9, 13], [13, 17]             // Palm
+            ];
+
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
+            ctx.lineWidth = 1;
+
+            connections.forEach(([i, j]) => {
+                ctx.beginPath();
+                ctx.moveTo(landmarks[i].x * canvasElement.width, landmarks[i].y * canvasElement.height);
+                ctx.lineTo(landmarks[j].x * canvasElement.width, landmarks[j].y * canvasElement.height);
+                ctx.stroke();
+            });
+
+            // Draw landmark points
+            ctx.fillStyle = 'rgba(212, 175, 55, 0.6)';
+            landmarks.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x * canvasElement.width, point.y * canvasElement.height, 3, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+        }
+
+        function drawBaton(fingerTip, batonTipX, batonTipY) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(fingerTip.x * canvasElement.width, fingerTip.y * canvasElement.height);
+            ctx.lineTo(batonTipX * canvasElement.width, batonTipY * canvasElement.height);
+            ctx.stroke();
+
+            // Baton tip dot
+            ctx.fillStyle = settings.trailColor;
+            ctx.beginPath();
+            ctx.arc(batonTipX * canvasElement.width, batonTipY * canvasElement.height, 6, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function drawTrail() {
+            if (trailPoints.length < 3) return;
+
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Glow effect
+            if (settings.glowEffect) {
+                ctx.shadowColor = settings.trailColor;
+                ctx.shadowBlur = 15;
+            }
+
+            // Draw smooth curve using quadratic bezier curves
+            for (let i = 2; i < trailPoints.length; i++) {
+                const progress = i / trailPoints.length;
+                const opacity = progress * 0.9;
+                const width = settings.trailWidth * progress;
+
+                ctx.strokeStyle = hexToRgba(settings.trailColor, opacity);
+                ctx.lineWidth = width;
+
+                // Use quadratic bezier for smoothing
+                const p0 = trailPoints[i - 2];
+                const p1 = trailPoints[i - 1];
+                const p2 = trailPoints[i];
+
+                // Control point is the previous point, endpoints are midpoints
+                const midX1 = (p0.x + p1.x) / 2;
+                const midY1 = (p0.y + p1.y) / 2;
+                const midX2 = (p1.x + p2.x) / 2;
+                const midY2 = (p1.y + p2.y) / 2;
+
+                ctx.beginPath();
+                ctx.moveTo(midX1, midY1);
+                ctx.quadraticCurveTo(p1.x, p1.y, midX2, midY2);
+                ctx.stroke();
+            }
+
+            ctx.shadowBlur = 0;
+        }
+
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        // Camera handling
+        async function startCamera() {
+            if (camera) {
+                stopTracking();
+                return;
+            }
+
+            try {
+                statusDot.classList.add('loading');
+                statusText.textContent = 'Starting camera...';
+
+                // Stop any uploaded video
+                uploadedVideo.pause();
+                uploadedVideo.style.display = 'none';
+                videoControls.classList.remove('visible');
+
+                videoElement.style.display = 'block';
+                placeholder.style.display = 'none';
+                currentSource = 'camera';
+
+                camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        if (hands && isTracking) {
+                            await hands.send({ image: videoElement });
+                        }
+                    },
+                    width: 1280,
+                    height: 720
+                });
+
+                await camera.start();
+                isTracking = true;
+                cameraBtn.classList.add('active');
+                cameraBtn.innerHTML = '<span class="btn-icon">⏹</span> Stop Camera';
+                statusText.textContent = 'Camera active';
+                statusDot.classList.remove('loading');
+
+            } catch (error) {
+                console.error('Camera error:', error);
+                statusText.textContent = 'Camera error';
+                statusDot.classList.remove('loading');
+            }
+        }
+
+        function stopTracking() {
+            isTracking = false;
+            
+            if (camera) {
+                camera.stop();
+                camera = null;
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+
+            videoElement.style.display = 'none';
+            cameraBtn.classList.remove('active');
+            cameraBtn.innerHTML = '<span class="btn-icon">📷</span> Start Camera';
+            statusDot.classList.remove('active');
+            statusText.textContent = 'Ready';
+        }
+
+        // Video upload handling
+        function handleVideoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Stop camera if running
+            if (camera) {
+                stopTracking();
+            }
+
+            statusDot.classList.add('loading');
+            statusText.textContent = 'Loading video...';
+
+            const url = URL.createObjectURL(file);
+            uploadedVideo.src = url;
+            uploadedVideo.style.display = 'block';
+            videoElement.style.display = 'none';
+            placeholder.style.display = 'none';
+            videoControls.classList.add('visible');
+            currentSource = 'video';
+
+            uploadedVideo.onloadedmetadata = () => {
+                canvasElement.width = uploadedVideo.videoWidth;
+                canvasElement.height = uploadedVideo.videoHeight;
+                statusDot.classList.remove('loading');
+                statusText.textContent = 'Video loaded';
+                updateTimeDisplay();
+            };
+
+            uploadedVideo.ontimeupdate = () => {
+                const progress = (uploadedVideo.currentTime / uploadedVideo.duration) * 100;
+                timelineProgress.style.width = `${progress}%`;
+                updateTimeDisplay();
+            };
+
+            // Start processing video frames
+            isTracking = true;
+            processVideoFrame();
+        }
+
+        async function processVideoFrame() {
+            if (!isTracking || currentSource !== 'video') return;
+
+            if (!uploadedVideo.paused && !uploadedVideo.ended) {
+                if (hands) {
+                    await hands.send({ image: uploadedVideo });
+                }
+            }
+
+            animationId = requestAnimationFrame(processVideoFrame);
+        }
+
+        function togglePlayPause() {
+            if (uploadedVideo.paused) {
+                uploadedVideo.play();
+                playPauseBtn.textContent = '⏸';
+                isTracking = true;
+                processVideoFrame();
+            } else {
+                uploadedVideo.pause();
+                playPauseBtn.textContent = '▶';
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimeDisplay() {
+            const current = formatTime(uploadedVideo.currentTime);
+            const duration = formatTime(uploadedVideo.duration || 0);
+            timeDisplay.textContent = `${current} / ${duration}`;
+        }
+
+        function seekVideo(event) {
+            const rect = timeline.getBoundingClientRect();
+            const pos = (event.clientX - rect.left) / rect.width;
+            uploadedVideo.currentTime = pos * uploadedVideo.duration;
+        }
+
+        // Settings handlers
+        function setupSettings() {
+            document.getElementById('trailLength').addEventListener('input', (e) => {
+                settings.trailLength = parseInt(e.target.value);
+                document.getElementById('trailLengthValue').textContent = e.target.value;
+            });
+
+            document.getElementById('trailWidth').addEventListener('input', (e) => {
+                settings.trailWidth = parseInt(e.target.value);
+                document.getElementById('trailWidthValue').textContent = e.target.value;
+            });
+
+            document.getElementById('batonExtension').addEventListener('input', (e) => {
+                settings.batonExtension = parseInt(e.target.value) / 100;
+                document.getElementById('batonExtensionValue').textContent = settings.batonExtension.toFixed(2);
+            });
+
+            document.getElementById('smoothing').addEventListener('input', (e) => {
+                settings.smoothing = parseInt(e.target.value);
+                document.getElementById('smoothingValue').textContent = e.target.value;
+                smoothingBuffer = []; // Reset buffer when changing smoothing
+            });
+
+            document.getElementById('showHand').addEventListener('change', (e) => {
+                settings.showHand = e.target.checked;
+            });
+
+            document.getElementById('glowEffect').addEventListener('change', (e) => {
+                settings.glowEffect = e.target.checked;
+            });
+
+            // Color picker
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+                    option.classList.add('selected');
+                    settings.trailColor = option.dataset.color;
+                });
+            });
+        }
+
+        // Event listeners
+        cameraBtn.addEventListener('click', startCamera);
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleVideoUpload);
+        clearBtn.addEventListener('click', () => {
+            trailPoints = [];
+            smoothingBuffer = [];
+            ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        });
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        timeline.addEventListener('click', seekVideo);
+
+        // Initialize
+        initHands();
+        setupSettings();
+    </script>
+</body>
+</html>
